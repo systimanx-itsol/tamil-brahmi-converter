@@ -42,6 +42,10 @@ To run this project locally, follow these steps:
 4. **Run the application**:
    ```bash
    uvicorn main:app --reload
+
+   #or
+   # Run on all interfaces
+   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
    ```
 
 5. **Open your browser** and go to `http://127.0.0.1:8000`.
