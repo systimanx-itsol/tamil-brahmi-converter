@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>English → Tamil → Brahmi Converter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <!-- Add Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4a90e2',
+                        secondary: '#f8f9fa',
+                        accent: '#9c27b0'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Keep only custom styles that aren't available in Tailwind */
+        .convert-btn {
+            transition: all 0.3s ease;
+        }
+        .convert-btn:hover {
+            transform: translateX(5px);
+        }
+        .convert-btn.reverse:hover {
+            transform: translateX(-5px);
+        }
+
+        .conversion-step {
+            @apply bg-secondary rounded-lg p-4 flex items-center justify-between gap-4;
+        }
+
+        .step-group {
+            @apply flex items-center gap-2 text-lg;
+        }
+
+        .step-tamil {
+            @apply font-bold text-gray-800 min-w-[30px] text-center;
+        }
+
+        .step-arrow {
+            @apply text-primary font-bold;
+        }
+
+        .step-brahmi {
+            @apply text-gray-700 min-w-[30px] text-center;
+        }
+
+        .step-parts {
+            @apply text-sm text-gray-600 mt-1;
+        }
+
+        .loader {
+            border-top-color: transparent;
+        }
+    </style>
+    <script>
+        function setupConversion() {
+            // Forward conversions
+            document.getElementById('toTamilBtn').addEventListener('click', () => convertToTamil());
+            document.getElementById('toBrahmiBtn').addEventListener('click', () => convertToBrahmi());
+            
+            // Brahmi to Tamil conversion
+            document.getElementById('brahmiToTamilBtn').addEventListener('click', () => convertBrahmiToTamil());
+        }
+
+        function convertToTamil() {
+            const englishText = document.getElementById('englishText').value.trim();
+            if (!englishText) return;
+
+            const toTamilBtn = document.getElementById('toTamilBtn');
+            toTamilBtn.disabled = true;
+            toTamilBtn.classList.add('loading');
+
+            // Show the loader
+            document.getElementById('loader').classList.remove('hidden');
+
+            fetch('/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: englishText,
+                    mode: 'english',
+                    convert_to_brahmi: false
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                toTamilBtn.disabled = false;
+                toTamilBtn.classList.remove('loading');
+                
+                // Hide the loader
+                document.getElementById('loader').classList.add('hidden');
+
+                if (data.success) {
+                    document.getElementById('tamilText').value = data.tamil_text;
+                    document.getElementById('errorMessage').style.display = 'none';
+                } else {
+                    document.getElementById('errorMessage').textContent = data.error;
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                toTamilBtn.disabled = false;
+                toTamilBtn.classList.remove('loading');
+                // Hide the loader
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('errorMessage').textContent = 'Network error: ' + error;
+                document.getElementById('errorMessage').style.display = 'block';
+            });
+        }
+
+        function convertToBrahmi() {
+            const tamilText = document.getElementById('tamilText').value.trim();
+            if (!tamilText) return;
+
+            const toBrahmiBtn = document.getElementById('toBrahmiBtn');
+            toBrahmiBtn.disabled = true;
+            toBrahmiBtn.classList.add('loading');
+
+            fetch('/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: tamilText,
+                    mode: 'direct',
+                    convert_to_brahmi: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                toBrahmiBtn.disabled = false;
+                toBrahmiBtn.classList.remove('loading');
+                
+                if (data.success && data.brahmi_text) {
+                    document.getElementById('brahmiText').value = data.brahmi_text;
+                    if (data.brahmi_steps) {
+                        showConversionSteps(data.brahmi_steps);
+                    }
+                    document.getElementById('errorMessage').style.display = 'none';
+                } else {
+                    document.getElementById('errorMessage').textContent = data.error || 'Conversion failed';
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                toBrahmiBtn.disabled = false;
+                toBrahmiBtn.classList.remove('loading');
+                document.getElementById('errorMessage').textContent = 'Network error: ' + error;
+                document.getElementById('errorMessage').style.display = 'block';
+            });
+        }
+
+        function convertBrahmiToTamil() {
+            const brahmiText = document.getElementById('brahmiText').value.trim();
+            if (!brahmiText) return;
+
+            const btn = document.getElementById('brahmiToTamilBtn');
+            btn.disabled = true;
+            btn.classList.add('loading');
+
+            fetch('/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: brahmiText,
+                    mode: 'brahmi_to_tamil',
+                    convert_to_brahmi: false
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.classList.remove('loading');
+                
+                if (data.success) {
+                    document.getElementById('tamilText').value = data.tamil_text;
+                    document.getElementById('errorMessage').style.display = 'none';
+                } else {
+                    document.getElementById('errorMessage').textContent = data.error;
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            })
+            .catch(error => handleError(error, btn));
+        }
+
+        function handleError(error, button) {
+            button.disabled = false;
+            button.classList.remove('loading');
+            document.getElementById('errorMessage').textContent = 'Network error: ' + error;
+            document.getElementById('errorMessage').style.display = 'block';
+        }
+
+        function showConversionSteps(steps) {
+            const stepsContainer = document.querySelector('.steps-container');
+            stepsContainer.innerHTML = `
+                <div class="bg-gray-300 rounded-lg p-4 mb-4">
+                    <div class="flex flex-wrap gap-2 justify-center">
+                        ${steps.map((step, index) => {
+                            let stepHtml = `
+                                <div class="bg-white rounded px-3 py-2 flex items-center gap-2">
+                                    <span class="font-medium text-2xl text-purple-600">${step.tamil}</span>
+                                    <span class="text-red-600 text-2xl">→</span>
+                                    <span class="text-2xl text-blue-600">${step.brahmi}</span>
+                                </div>
+                            `;
+                            // if (step.type === 'consonant_vowel') {
+                            //     stepHtml += `
+                            //         <div class="text-xs text-gray-500 mt-1">
+                            //             (${step.parts[0].tamil + step.parts[1].tamil})
+                            //         </div>
+                            //     `;
+                            // }
+                            return stepHtml;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        document.addEventListener('DOMContentLoaded', setupConversion);
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+       <!-- Header -->
+       <div class="bg-gray-800 text-white  shadow-lg p-8 mb-8 w-full">
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-white mb-4">
+            English → Tamil → Brahmi Converter
+        </h1>
+        <p class="text-white text-center">
+            Convert text from English to Tamil and then to Tamil-Brahmi script
+        </p>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl w-full">
+     
+
+        <!-- Main Conversion Interface -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-6 items-start">
+                <!-- English Input -->
+                <div class="md:col-span-1">
+                    <div class="bg-secondary rounded-lg p-4">
+                        <h3 class="text-primary font-semibold mb-3">English Text</h3>
+                        <textarea 
+                            id="englishText"
+                            class="w-full h-40 p-3 border rounded-lg resize-y focus:ring-2 focus:ring-primary focus:outline-none"
+                            placeholder="Type your English text here..."
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- English to Tamil Button -->
+                <div class="flex md:flex-col justify-center items-center">
+                    <button id="toTamilBtn" 
+                        class="convert-btn bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                        English → Tamil
+                    </button>
+                </div>
+
+                <!-- Tamil Text -->
+                <div class="md:col-span-1">
+                    <div class="bg-secondary rounded-lg p-4">
+                        <h3 class="text-primary font-semibold mb-3">Tamil Text</h3>
+                        <textarea 
+                            id="tamilText"
+                            class="w-full h-40 p-3 border rounded-lg resize-y focus:ring-2 focus:ring-primary focus:outline-none"
+                            placeholder="Tamil text will appear here..."
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- Tamil to Brahmi Buttons -->
+                <div class="flex md:flex-col justify-center items-center gap-4">
+                    <button id="toBrahmiBtn" 
+                        class="convert-btn bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                        Tamil → Brahmi
+                    </button>
+                    <button id="brahmiToTamilBtn" 
+                        class="convert-btn reverse bg-accent text-white px-6 py-3 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent">
+                        ← Brahmi to Tamil
+                    </button>
+                </div>
+
+                <!-- Brahmi Text -->
+                <div class="md:col-span-1">
+                    <div class="bg-secondary rounded-lg p-4">
+                        <h3 class="text-primary font-semibold mb-3">Tamil-Brahmi Script</h3>
+                        <textarea 
+                            id="brahmiText"
+                            class="w-full h-40 p-3 border rounded-lg resize-y focus:ring-2 focus:ring-primary focus:outline-none"
+                            placeholder="Brahmi text will appear here..."
+                        ></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorMessage" 
+                class="hidden mt-4 p-4 text-red-700 bg-red-100 rounded-lg">
+            </div>
+        </div>
+
+        <!-- Live Conversion Section -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-2xl font-bold text-primary mb-6 text-center">
+                Live Conversion Steps
+            </h3>
+            <div class="steps-container space-y-4">
+                <!-- Steps will be added here dynamically -->
+            </div>
+        </div>
+
+        <!-- Conversion Guide -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-2xl font-bold text-primary mb-6 text-center">
+                Tamil-Brahmi Reference Guide
+            </h3>
+            
+            <!-- Examples Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-secondary rounded-lg p-6">
+                    <h4 class="font-semibold text-lg mb-4 text-primary">Common Examples</h4>
+                    <div class="space-y-4">
+                        <!-- Example 1 -->
+                        <div class="bg-white rounded-lg p-4 text-center">
+                            <div class="text-xl mb-2">வணக்கம்</div>
+                            <div class="text-primary text-2xl">↓</div>
+                            <div class="text-xl mb-2">𑀯𑀡𑀓𑁆𑀓𑀫𑁆</div>
+                            <div class="text-sm text-gray-600">
+                                வ(𑀯) + ண(𑀡) + க்(𑀓𑁆) + க(𑀓) + ம்(𑀫𑁆)
+                            </div>
+                        </div>
+
+                        <!-- Example 2 -->
+                        <div class="bg-white rounded-lg p-4 text-center">
+                            <div class="text-xl mb-2">தமிழ்</div>
+                            <div class="text-primary text-2xl">↓</div>
+                            <div class="text-xl mb-2">𑀢𑀫𑀺𑀱𑁆</div>
+                            <div class="text-sm text-gray-600">
+                                த(𑀢) + மி(𑀫𑀺) + ழ்(𑀱𑁆)
+                            </div>
+                        </div>
+
+                        <!-- Example 3 -->
+                        <div class="bg-white rounded-lg p-4 text-center">
+                            <div class="text-xl mb-2">தாய்மா</div>
+                            <div class="text-primary text-2xl">↓</div>
+                            <div class="text-xl mb-2">𑀢𑀸𑀬𑁆𑀫𑀸</div>
+                            <div class="text-sm text-gray-600">
+                                தா(𑀢𑀸) + ய்(𑀬𑁆) + மா(𑀫𑀸)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Character Grids -->
+                <div class="space-y-6">
+                    <!-- Vowels -->
+                    <div class="bg-secondary rounded-lg p-6">
+                        <h4 class="font-semibold text-lg mb-4 text-primary">
+                            Basic Vowels (உயிர் எழுத்துகள்)
+                        </h4>
+                        <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                            <!-- Vowel items -->
+                            <div class="bg-white rounded p-2 text-center">அ → 𑀅</div>
+                            <div class="bg-white rounded p-2 text-center">ஆ → 𑀆</div>
+                            <div class="bg-white rounded p-2 text-center">இ → 𑀇</div>
+                            <div class="bg-white rounded p-2 text-center">ஈ → 𑀈</div>
+                            <div class="bg-white rounded p-2 text-center">உ → 𑀉</div>
+                            <div class="bg-white rounded p-2 text-center">ஊ → 𑀊</div>
+                            <div class="bg-white rounded p-2 text-center">எ → 𑀏</div>
+                            <div class="bg-white rounded p-2 text-center">ஏ → 𑀐</div>
+                            <div class="bg-white rounded p-2 text-center">ஐ → 𑀑</div>
+                            <div class="bg-white rounded p-2 text-center">ஒ → 𑀒</div>
+                            <div class="bg-white rounded p-2 text-center">ஓ → 𑀓</div>
+                            <div class="bg-white rounded p-2 text-center">ஔ → 𑀔</div>
+                        </div>
+                    </div>
+
+                    <!-- Consonants -->
+                    <div class="bg-secondary rounded-lg p-6">
+                        <h4 class="font-semibold text-lg mb-4 text-primary">
+                            Consonants (மெய் எழுத்துகள்)
+                        </h4>
+                        <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                            <!-- Consonant items -->
+                            <div class="bg-white rounded p-2 text-center">க் → 𑀓𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ங் → 𑀗𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ச் → 𑀘𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ஞ் → 𑀜𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ட் → 𑀝𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ண் → 𑀡𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">த் → 𑀢𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ந் → 𑀨𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ப் → 𑀧𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ம் → 𑀫𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ய் → 𑀬𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ர் → 𑀭𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ல் → 𑀮𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">வ் → 𑀯𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ழ் → 𑀱𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ள் → 𑀲𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ற் → 𑀴𑁆</div>
+                            <div class="bg-white rounded p-2 text-center">ன் → 𑀦𑁆</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Section -->
+    <footer class="bg-gray-800 text-white text-center py-4 mt-8">
+        <p class="text-sm">
+            Made with ❤️ Tamil | Dedicated by 
+            <a href="https://systimanx.com" class="text-blue-400 hover:underline" target="_blank">SystimaNX IT Solution</a>
+        </p>
+    </footer>
+
+    <!-- Loader -->
+    <div id="loader" class="hidden fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
+        <div class="loader border-t-4 border-b-4 border-blue-500 rounded-full w-16 h-16 animate-spin"></div>
+    </div>
+
+    <!-- Keep your existing JavaScript -->
+    <script>
+        // ... your existing JavaScript code ...
+    </script>
+</body>
+</html> 
