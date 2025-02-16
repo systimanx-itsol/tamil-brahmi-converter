@@ -6,7 +6,7 @@ This project is a web application that allows users to convert text from English
 
 ## DEMO
 
-[![Watch the video] (https://youtu.be/D6c7k4TtcUk) ]
+https://youtu.be/D6c7k4TtcUk
 
 ## Features
 
