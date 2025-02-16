@@ -1,0 +1,5 @@
+fastapi==0.75.0
+uvicorn==0.17.0
+python-dotenv==0.19.2
+gradio-client==0.1.0  # Adjust the version as necessary
+httpx==0.23.0
