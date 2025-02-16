@@ -4,6 +4,10 @@
 
 This project is a web application that allows users to convert text from English to Tamil and then to Tamil-Brahmi script. The application provides a user-friendly interface for inputting text and viewing the converted results in real-time.
 
+## DEMO
+
+[![Watch the video] (https://youtu.be/D6c7k4TtcUk) ]
+
 ## Features
 
 - **English to Tamil Conversion**: Input English text and get the corresponding Tamil text.
