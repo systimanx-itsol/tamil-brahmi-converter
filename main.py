@@ -6,6 +6,11 @@ from gradio_client import Client
 from pydantic import BaseModel, Field
 import logging
 from typing import Union
+import os
+from dotenv import load_dotenv  # Import dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.getLogger('httpx').setLevel(logging.WARNING)
@@ -20,7 +25,8 @@ templates = Jinja2Templates(directory="templates")
 
 # Initialize the Hugging Face Gradio clients
 TAMIL_TRANSLATOR_URL = "asdfpoiu/tamil_translator"
-tamil_client = Client(TAMIL_TRANSLATOR_URL, hf_token="")
+hf_token = os.getenv("HF_TOKEN")  # Get the token from environment variable
+tamil_client = Client(TAMIL_TRANSLATOR_URL, hf_token=hf_token)
 
 # Tamil to Tamil-Brahmi mapping with improved accuracy
 TAMIL_TO_BRAHMI = {
@@ -54,7 +60,7 @@ TAMIL_TO_BRAHMI = {
     'ே': '𑁃',  # ee
     'ை': '𑁄',  # ai
     'ொ': '𑁅',  # o
-    'ோ': '𑁆𑀓',  # oo
+    'ோ': '��𑀓',  # oo
     'ௌ': '𑁇',  # au
     '்': '𑁆',  # pulli
 
